@@ -25,15 +25,14 @@ io.on("connection", (socket) => {
   socket.on("joinSession", (sessionId, userId, username, pfp, pts, cb) => {
     const user = {
       session: sessionId,
-      userId: userId,
-      username: username,
-      pfp: pfp,
-      pts: pts.pts,
+      userId,
+      username,
+      pfp,
+      pts: pts,
       socket: socket.id,
     };
-    console.log(user);
+
     socket.join(sessionId);
-    console.log("join", sessionId);
 
     if (
       users.filter((u) => u.userId === userId && u.session === sessionId)
@@ -41,20 +40,25 @@ io.on("connection", (socket) => {
     ) {
       users.push(user);
     }
+
+    console.log("join", users);
+
     cb(users.filter((u) => u.session === sessionId));
   });
 
   socket.on("play", (sessionId, playMsg) => {
-    console.log("play", sessionId);
+    console.log("play", { sessionId, playMsg });
     io.to(sessionId).emit("play", playMsg);
   });
 
   socket.on("points", (sessionId, userId, pts, cb) => {
+    console.log("points", { sessionId, userId, pts });
     const user = users.filter(
       (u) => u.userId === userId && u.session === sessionId
     )[0];
+
     if (user) {
-      user.pts = pts.pts;
+      user.pts = pts;
       cb(users.filter((u) => u.session === sessionId));
       const newPts = users.filter((u) => u.session === sessionId);
       io.to(sessionId).emit("leaderboard", newPts);
@@ -62,7 +66,8 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    users = users.filter((user) => user.id !== socket.id);
+    users = users.filter((user) => user.socket !== socket.id);
+    console.log("disconnect", users);
     io.emit("newMembers", users);
   });
 });
