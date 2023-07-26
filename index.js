@@ -1,26 +1,26 @@
-// Express Server
-const express = require("express")
-const app = express()
+require("dotenv").config();
+const express = require("express");
+const app = express();
 
 // CORS
 const cors = require("cors");
 app.use(cors());
 
 // Socket.io
-const server = require("http").Server(app)
+const server = require("http").Server(app);
 const io = require("socket.io")(server, {
   cors: {
-    origin: "https://radcats-karaoke.herokuapp.com",
-    // origin: "http://localhost:3000",
-    methods: ["GET", "POST"]
-  }
-})
+    // origin: "https://radcats-karaoke.herokuapp.com",
+    origin: process.env.APP_ORIGIN,
+    methods: ["GET", "POST"],
+  },
+});
 
-let users = []
+let users = [];
 
 // Events handler
-io.on("connection", socket => {
-  console.log("connected")
+io.on("connection", (socket) => {
+  console.log("connected");
 
   socket.on("joinSession", (sessionId, userId, username, pfp, pts, cb) => {
     const user = {
@@ -29,38 +29,46 @@ io.on("connection", socket => {
       username: username,
       pfp: pfp,
       pts: pts.pts,
-      socket: socket.id
+      socket: socket.id,
+    };
+    console.log(user);
+    socket.join(sessionId);
+    console.log("join", sessionId);
+
+    if (
+      users.filter((u) => u.userId === userId && u.session === sessionId)
+        .length === 0
+    ) {
+      users.push(user);
     }
-    console.log(user)
-    socket.join(sessionId)
-    console.log("join", sessionId)
-    if (users.filter(u => (u.userId === userId) && (u.session === sessionId)).length === 0) {
-      users.push(user)
-    }
-    cb(users.filter(u => (u.session === sessionId)))
-  })
+    cb(users.filter((u) => u.session === sessionId));
+  });
 
   socket.on("play", (sessionId, playMsg) => {
-    console.log("play", sessionId)
-    io.to(sessionId).emit("play", playMsg)
-  })
+    console.log("play", sessionId);
+    io.to(sessionId).emit("play", playMsg);
+  });
 
   socket.on("points", (sessionId, userId, pts, cb) => {
-    const user = users.filter(u => (u.userId === userId) && (u.session === sessionId))[0]
-    user.pts = pts.pts
-    cb(users.filter(u => (u.session === sessionId)))
-    const newPts = users.filter(u => (u.session === sessionId))
-    io.to(sessionId).emit("leaderboard", newPts)
-  })
+    const user = users.filter(
+      (u) => u.userId === userId && u.session === sessionId
+    )[0];
+    if (user) {
+      user.pts = pts.pts;
+      cb(users.filter((u) => u.session === sessionId));
+      const newPts = users.filter((u) => u.session === sessionId);
+      io.to(sessionId).emit("leaderboard", newPts);
+    }
+  });
 
   socket.on("disconnect", () => {
-    users = users.filter(user => user.id !== socket.id)
-    io.emit("newMembers", users)
-  })
-})
+    users = users.filter((user) => user.id !== socket.id);
+    io.emit("newMembers", users);
+  });
+});
 
 // Server
-const PORT = process.env.PORT || 3001
+const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
-  console.log(`http://localhost:${PORT}`)
-})
+  console.log(`http://localhost:${PORT}`);
+});
