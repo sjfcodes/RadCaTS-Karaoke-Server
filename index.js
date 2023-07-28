@@ -41,18 +41,18 @@ io.on("connection", (socket) => {
       users.push(user);
     }
 
-    console.log("join", users);
+    console.log("join", JSON.stringify(users));
 
     cb(users.filter((u) => u.session === sessionId));
   });
 
   socket.on("play", (sessionId, playMsg) => {
-    console.log("play", { sessionId, playMsg });
+    console.log("play", JSON.stringify({ sessionId, playMsg }));
     io.to(sessionId).emit("play", playMsg);
   });
 
   socket.on("points", (sessionId, userId, pts, cb) => {
-    console.log("points", { sessionId, userId, pts });
+    console.log("points", JSON.stringify({ sessionId, userId, pts }));
     const user = users.filter(
       (u) => u.userId === userId && u.session === sessionId
     )[0];
@@ -67,7 +67,7 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     users = users.filter((user) => user.socket !== socket.id);
-    console.log("disconnect", users);
+    console.log("disconnect", JSON.stringify(users));
     io.emit("newMembers", users);
   });
 });
